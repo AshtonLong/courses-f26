@@ -32,6 +32,16 @@
   }
   const fmtW = (w) => (Number.isInteger(w) ? String(w) : w.toFixed(1).replace(/\.0$/, ""));
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const NO_CLASS = new Set(TERM.noClass || []);
+  const MAKEUP = TERM.makeup || {}; // iso → weekday schedule it runs (1 = Mon … 5 = Fri)
+  const DOW_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  // weekly classes that actually meet on day d (handles breaks, makeup days and per-row start dates)
+  function classesOn(d) {
+    const iso = isoDay(d);
+    if (NO_CLASS.has(iso) || d < parseISO(TERM.start) || d > parseISO(TERM.lastClass)) return [];
+    const dow = MAKEUP[iso] || d.getDay();
+    return SCHEDULE.filter((s) => s.days.includes(dow) && (!s.from || iso >= s.from));
+  }
 
   const params = new URLSearchParams(location.search);
   function now() {
@@ -448,7 +458,7 @@
     // exam period & holiday
     s += `<rect x="${x(parseISO(TERM.examStart))}" y="${padT}" width="${x(t1) - x(parseISO(TERM.examStart))}" height="${rowH * COURSE_KEYS.length}" fill="var(--surface-2)"/>`;
     s += `<text class="ax" x="${(x(parseISO(TERM.examStart)) + x(t1)) / 2}" y="${H - 8}" text-anchor="middle">exams</text>`;
-    s += `<rect x="${x(parseISO("2026-10-12"))}" y="${padT}" width="${Math.max(2, x(parseISO("2026-10-14")) - x(parseISO("2026-10-12")))}" height="${rowH * COURSE_KEYS.length}" fill="var(--surface-3)"/>`;
+    TERM.noClass.forEach((iso) => { const d = parseISO(iso); s += `<rect x="${x(d)}" y="${padT}" width="${Math.max(2, x(addDays(d, 1)) - x(d))}" height="${rowH * COURSE_KEYS.length}" fill="var(--surface-3)"/>`; });
     COURSE_KEYS.forEach((k, r) => {
       const cy = padT + rowH * r + rowH / 2;
       s += `<line class="gridline" x1="${padL}" x2="${W - padR}" y1="${cy}" y2="${cy}"/>`;
@@ -538,7 +548,7 @@
     const gridStart = mondayOf(first);
     const last = new Date(2026, m + 1, 0);
     const gridEnd = addDays(mondayOf(last), 7);
-    const holidays = new Set(["2026-10-12", "2026-10-13"]);
+    const holidays = NO_CLASS;
     const examS = parseISO(TERM.examStart), examE = parseISO(TERM.examEnd);
     let cells = "";
     for (let d = gridStart; d < gridEnd; d = addDays(d, 1)) {
@@ -548,7 +558,7 @@
       const cls = ["cal-day", d.getMonth() !== m ? "out" : "", sameDay(d, ref) ? "today" : "", state.calSel === iso ? "sel" : "", holidays.has(iso) ? "holiday" : ""].join(" ");
       const exam = d >= examS && d <= examE;
       cells += `<button class="${cls}" data-day="${iso}">
-        <div class="dn"><span>${d.getDate()}${exam && d.getMonth() === m ? ' <span class="tiny muted">exams</span>' : ""}${holidays.has(iso) ? ' <span class="tiny muted">no class</span>' : ""}</span>${load >= 1 ? `<span class="load" style="background:${heatColor(load)};color:#fff">${fmtW(Math.round(load * 10) / 10)}</span>` : ""}</div>
+        <div class="dn"><span>${d.getDate()}${exam && d.getMonth() === m ? ' <span class="tiny muted">exams</span>' : ""}${holidays.has(iso) ? ' <span class="tiny muted">no class</span>' : ""}${MAKEUP[iso] ? ` <span class="tiny muted">${DOW[MAKEUP[iso]]} sched</span>` : ""}</span>${load >= 1 ? `<span class="load" style="background:${heatColor(load)};color:#fff">${fmtW(Math.round(load * 10) / 10)}</span>` : ""}</div>
         ${its.map((i) => `<div class="cal-ev ${i.minor ? "minor" : ""} ${isDone(i) ? "done" : ""}" style="--c:${i.c}" title="${esc(i.cc.code + " " + i.title)}">${esc(shortCode(i.course))} ${esc(shortTitle(i))}</div>`).join("")}
         <div class="cal-dots">${its.filter((i) => !i.minor).map((i) => `<i class="dot" style="--c:${i.c}"></i>`).join("")}</div>
       </button>`;
@@ -651,7 +661,7 @@
             ${donut(parts)}
             <div class="breakdown">${parts.map((p) => `<div><i class="dot" style="--c:${p.c}"></i><span class="lbl">${esc(p.l)}</span><b class="num">${fmtW(p.v)}%</b></div>`).join("")}
               ${k === "CIS3760" ? `<div class="small muted">Sprints are ranked: your best gets 35%, then 25/25, and your worst 15%.</div>` : ""}
-              ${k === "CIS3210" ? `<div class="small muted">+ up to 3 bonus points from quiz average.</div>` : ""}
+              ${k === "CIS3210" ? `<div class="small muted">+ up to 3 bonus points (quiz average × 3), counted in the test component. Final grade capped at 100%.</div>` : ""}
             </div>
           </div>
         </div>
@@ -660,6 +670,7 @@
           <ul class="rules">${c.passRules.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
         </div>
         <details class="policies"><summary>Policies & fine print (${c.policies.length})</summary><ul>${c.policies.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>
+        ${c.topics ? `<details class="policies"><summary>Topic schedule</summary><ul>${c.topics.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
         <div class="rmp">
           <div class="diff-head"><span class="subhead" style="margin:0">Rate My Professors · ${esc(c.rmpName)}</span>${r ? `<a class="small" href="${esc(r.url)}" target="_blank" rel="noopener">Open ↗</a>` : ""}</div>
           ${r ? `<div class="rmp-stats">
@@ -685,6 +696,7 @@
   /* =================== grades =================== */
   const gradeInputs = (k) => ITEMS_X.filter((i) => i.course === k && i.weight > 0);
   const g = (id) => { const v = state.grades[id]; return v === "" || v == null || isNaN(v) ? null : Number(v); };
+  const gradeText = (r) => r.label || r.grade.toFixed(1) + "%";
 
   function computeFinal(k, s) {
     // s: id → score (0..100), all filled
@@ -696,7 +708,7 @@
       const A = aIds.reduce((t, i) => t + s[i] * 0.06, 0);
       const qs = qIds.map((i) => s[i]).sort((a, b) => b - a);
       const quizPts = (qs.slice(0, 15).reduce((a, b) => a + b, 0) / 15) * 0.06;
-      const bonus = (qs.reduce((a, b) => a + b, 0) / qs.length / 100) * 3;
+      const bonus = Math.min(3, (qs.reduce((a, b) => a + b, 0) / qs.length / 100) * 3); // outline: "up to 3 bonus points"
       const T = quizPts + s["3210-mt"] * 0.25 + s["3210-fx"] * 0.45 + bonus;
       const passA = A >= 12, passT = T >= 38;
       const aPct = (A / 24) * 100, tPct = Math.min(100, (T / 76) * 100);
@@ -714,10 +726,19 @@
     }
     const total = ids.reduce((t, i) => t + (s[i] * W[i]) / 100, 0);
     if (k === "CIS3150") {
-      const cw = ids.filter((i) => /-(a|p)\d$/.test(i)).reduce((t, i) => t + s[i] * W[i], 0) / 30;
-      const ex = ids.filter((i) => /-(t\d|fx)$/.test(i)).reduce((t, i) => t + s[i] * W[i], 0) / 70;
+      const cwPts = ids.filter((i) => /-(a|p)\d$/.test(i)).reduce((t, i) => t + (s[i] * W[i]) / 100, 0); // out of 30
+      const exPts = ids.filter((i) => /-(t\d|fx)$/.test(i)).reduce((t, i) => t + (s[i] * W[i]) / 100, 0); // out of 70
+      const cw = (cwPts / 30) * 100, ex = (exPts / 70) * 100;
       checks.push({ ok: cw >= 50, t: `Course work (A + participation) ${cw.toFixed(1)}% (need 50%)` });
       checks.push({ ok: ex >= 50, t: `Tests + final ${ex.toFixed(1)}% (need 50%)` });
+      if (cw < 50 || ex < 50) {
+        // outline §4.2: INC if (30% of course work + remaining marks) > 50, else that number
+        const alt = 0.3 * cwPts + exPts;
+        checks.push({ ok: false, t: alt > 50
+          ? `Bar missed → INC (30% of course work + tests/final = ${alt.toFixed(1)} > 50). Cleared by an extra assignment.`
+          : `Bar missed → grade = 30% of course work + tests/final = ${alt.toFixed(1)}%` });
+        return alt > 50 ? { grade: 49.9, label: "INC", checks } : { grade: alt, checks }; // INC isn't a pass
+      }
     }
     return { grade: total, checks };
   }
@@ -728,8 +749,8 @@
     const missing = inputs.filter((i) => g(i.id) == null);
     const wEntered = entered.reduce((t, i) => t + i.weight, 0);
     const fill = (x) => Object.fromEntries(inputs.map((i) => [i.id, g(i.id) ?? x]));
-    let current = wEntered ? entered.reduce((t, i) => t + g(i.id) * i.weight, 0) / wEntered : null;
-    if (!missing.length) current = computeFinal(k, fill(0)).grade; // all in: apply the course's real rules
+    let current = wEntered ? entered.reduce((t, i) => t + g(i.id) * i.weight, 0) / wEntered : null, currentLabel = null;
+    if (!missing.length) { const r = computeFinal(k, fill(0)); current = r.grade; currentLabel = r.label || null; } // all in: apply the course's real rules
     const target = Number(state.target[k] ?? 80);
     let need = null, needState = "";
     if (missing.length === 0) needState = "complete";
@@ -744,9 +765,9 @@
       }
     }
     const projected = current != null ? computeFinal(k, fill(current)) : null;
-    const floor = computeFinal(k, fill(0)).grade;
-    const ceil = computeFinal(k, fill(100)).grade;
-    return { inputs, entered, missing, wEntered, current, target, need, needState, projected, floor, ceil };
+    const floorR = computeFinal(k, fill(0)), ceilR = computeFinal(k, fill(100));
+    const floor = floorR.grade, ceil = ceilR.grade;
+    return { inputs, entered, missing, wEntered, current, currentLabel, target, need, needState, projected, floor, ceil, floorR, ceilR };
   }
 
   function renderGrades() {
@@ -789,7 +810,7 @@
     const box = $("#gResults");
     if (!box) return;
     let needHtml;
-    if (s.needState === "complete") needHtml = `<div class="need-box"><div class="small">All marks entered</div><div class="v">${computeFinal(k, Object.fromEntries(s.inputs.map((i) => [i.id, g(i.id)]))).grade.toFixed(1)}%</div><div class="small">final grade</div></div>`;
+    if (s.needState === "complete") needHtml = `<div class="need-box"><div class="small">All marks entered</div><div class="v">${esc(gradeText(computeFinal(k, Object.fromEntries(s.inputs.map((i) => [i.id, g(i.id)])))))}</div><div class="small">final grade</div></div>`;
     else if (s.needState === "locked") needHtml = `<div class="need-box"><div class="v">Locked in ✓</div><div class="small">You'd reach ${s.target}% even with zeros on everything left.</div></div>`;
     else if (s.needState === "impossible") needHtml = `<div class="need-box" style="background:var(--danger-soft)"><div class="v" style="color:var(--danger)">Out of reach</div><div class="small">Max possible now is ${s.ceil.toFixed(1)}%. Try a lower target.</div></div>`;
     else needHtml = `<div class="need-box"><div class="small">To finish with <b>${s.target}%</b> you need to average</div><div class="v">${s.need.toFixed(1)}%</div><div class="small">on the remaining ${s.missing.length} item${s.missing.length === 1 ? "" : "s"} (${fmtW(Math.round((100 - s.wEntered) * 10) / 10)}% of the grade)</div></div>`;
@@ -798,12 +819,12 @@
       <div class="card">
         <div class="card-h"><h2>Where you stand</h2><span class="sub">${esc(COURSES[k].code)}</span></div>
         <div class="g-stat-row">
-          <div class="g-stat"><div class="l">Current average</div><div class="big-num">${s.current != null ? s.current.toFixed(1) + "%" : "—"}</div><div class="tiny muted">weighted over what's graded</div></div>
+          <div class="g-stat"><div class="l">Current average</div><div class="big-num">${s.current != null ? esc(s.currentLabel || s.current.toFixed(1) + "%") : "—"}</div><div class="tiny muted">weighted over what's graded</div></div>
           <div class="g-stat"><div class="l">Graded so far</div><div class="v">${fmtW(Math.round(s.wEntered * 10) / 10)}%</div><div class="bar"><span style="width:${s.wEntered}%;background:${COURSES[k].color}"></span></div></div>
         </div>
         <div class="g-stat-row" style="margin-top:14px">
-          <div class="g-stat"><div class="l">Projected final</div><div class="v">${proj ? proj.grade.toFixed(1) + "%" : "—"}</div><div class="tiny muted">if you keep this average</div></div>
-          <div class="g-stat"><div class="l">Guaranteed / max</div><div class="v">${s.floor.toFixed(0)}–${s.ceil.toFixed(0)}%</div><div class="tiny muted">zeros vs perfect on the rest</div></div>
+          <div class="g-stat"><div class="l">Projected final</div><div class="v">${proj ? esc(gradeText(proj)) : "—"}</div><div class="tiny muted">if you keep this average</div></div>
+          <div class="g-stat"><div class="l">Guaranteed / max</div><div class="v">${[s.floorR, s.ceilR].map((r) => esc(r.label || r.grade.toFixed(0) + "%")).join("–")}</div><div class="tiny muted">zeros vs perfect on the rest</div></div>
         </div>
       </div>
       <div class="card">
@@ -812,7 +833,7 @@
         ${needHtml}
       </div>
       ${proj && proj.checks.length ? `<div class="card"><div class="card-h"><h2>Pass requirements</h2><span class="sub">at your current pace</span></div><div class="checks">${proj.checks.map((x) => `<div class="checkline"><span class="badge ${x.ok ? "ok" : "danger"}">${x.ok ? "OK" : "AT RISK"}</span>${esc(x.t)}</div>`).join("")}</div></div>` : ""}
-      ${k === "CIS3760" ? `<div class="card small muted">Sprint ranking only kicks in with all 4 marks. Until then the average is a simple mean. Ranking can only raise it.</div>` : ""}`;
+      ${k === "CIS3760" ? `<div class="card small muted">Enter your individual sprint mark (the team mark after peer-evaluation scaling). Sprint ranking only kicks in with all 4 marks. Until then the average is a simple mean. Ranking can only raise it.</div>` : ""}`;
   }
 
   /* =================== VIEW: week =================== */
@@ -822,16 +843,14 @@
     const mon = addDays(mondayOf(ref), state.weekOffset * 7);
     const days = [0, 1, 2, 3, 4].map((i) => addDays(mon, i));
     const H0 = 8, H1 = 18, PX = 48;
-    const holidays = new Set(["2026-10-12", "2026-10-13"]);
+    const holidays = NO_CLASS;
     const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
     const top = (t) => ((toMin(t) - H0 * 60) / 60) * PX;
-    const inTerm = mon >= addDays(parseISO(TERM.firstWeek), 7) && mon <= parseISO(TERM.lastClass);
     const dayItems = (d) => ITEMS_X.filter((i) => !i.ongoing && !i.tbd && !i.minor && (sameDay(i.start, d) || (i.window && i.type === "meeting" && sameDay(i.start, d))));
 
-    const cols = days.map((d, di) => {
-      const dow = di + 1;
+    const cols = days.map((d) => {
       const iso = isoDay(d);
-      const blocks = holidays.has(iso) || !inTerm ? [] : SCHEDULE.filter((s) => s.days.includes(dow));
+      const blocks = classesOn(d).map((b) => ({ ...b }));
       // side-by-side lanes for overlapping blocks
       blocks.forEach((b) => {
         const ov = blocks.filter((o) => toMin(o.start) < toMin(b.end) && toMin(b.start) < toMin(o.end));
@@ -839,6 +858,7 @@
       });
       return `<div class="wk-col" style="height:${(H1 - H0) * PX}px">
           ${holidays.has(iso) ? `<div class="empty small" style="padding-top:40px">No classes</div>` : ""}
+          ${MAKEUP[iso] ? `<div class="tiny muted" style="position:absolute;bottom:4px;left:6px;right:6px">Makeup day: ${DOW_LONG[MAKEUP[iso]]} schedule</div>` : ""}
           ${blocks.map((b) => { const c = COURSES[b.course]; return `<div class="wk-block ${b.kind}" style="--c:${c.color};top:${top(b.start)}px;height:${top(b.end) - top(b.start) - 2}px${b._n > 1 ? `;left:calc(${(b._i / b._n) * 100}% + 3px);right:auto;width:calc(${100 / b._n}% - 6px)` : ""}" data-tip="${esc(`<b>${c.code} ${b.kind === "office" ? "office hours" : b.kind}</b><br>${b.start}–${b.end}${b.where ? " · " + b.where : ""}`)}"><b>${esc(c.code)}</b>${b.kind === "office" ? "Office hrs" : b.kind === "lab" ? "Lab" + (b.where ? " · " + esc(b.where) : "") : esc(b.where || "Lecture")}</div>`; }).join("")}
           ${dayItems(d).filter((i) => i.hasTime && i.start.getHours() >= H0 && i.start.getHours() < H1).map((i) => `<div class="wk-block deadline" style="--c:${i.c};top:${top(`${i.start.getHours()}:${i.start.getMinutes()}`)}px;height:${Math.max(20, i.end ? top(i.end) - top(`${i.start.getHours()}:${i.start.getMinutes()}`) - 2 : 20)}px"><b>${esc(shortCode(i.course))} ${esc(shortTitle(i))}</b></div>`).join("")}
         </div>`;
@@ -849,11 +869,11 @@
     const wkend = ITEMS_X.filter((i) => !i.ongoing && !i.tbd && !i.minor && i.start >= addDays(mon, 5) && i.start < addDays(mon, 7));
     const weekItems = ITEMS_X.filter((i) => !i.ongoing && !i.tbd && ((i.start >= mon && i.start < addDays(mon, 7))));
 
-    const mobile = days.map((d, di) => {
+    const mobile = days.map((d) => {
       const iso = isoDay(d);
-      const blocks = holidays.has(iso) || !inTerm ? [] : SCHEDULE.filter((s) => s.days.includes(di + 1)).sort((a, b) => toMin(a.start) - toMin(b.start));
+      const blocks = classesOn(d).sort((a, b) => toMin(a.start) - toMin(b.start));
       const its = dayItems(d);
-      return `<div class="card day-list"><h4 class="${sameDay(d, ref) ? "" : ""}">${esc(fmtDow(d))}${sameDay(d, ref) ? ' <span class="badge accent">today</span>' : ""}${holidays.has(iso) ? ' <span class="badge">no classes</span>' : ""}</h4>
+      return `<div class="card day-list"><h4 class="${sameDay(d, ref) ? "" : ""}">${esc(fmtDow(d))}${sameDay(d, ref) ? ' <span class="badge accent">today</span>' : ""}${holidays.has(iso) ? ' <span class="badge">no classes</span>' : ""}${MAKEUP[iso] ? ` <span class="badge">${DOW_LONG[MAKEUP[iso]]} schedule</span>` : ""}</h4>
         ${its.map((i) => `<div class="slot" style="background:var(--danger-soft)"><span class="tm">${i.hasTime ? fmtT(i.start) : i.window ? "this week" : "by 11:59 PM"}</span><span class="dot" style="--c:${i.c}"></span><b>${esc(i.cc.code)} ${esc(i.title)}</b><span class="spacer"></span>${wBadge(i)}</div>`).join("")}
         ${blocks.map((b) => `<div class="slot"><span class="tm">${b.start}–${b.end}</span><span class="dot" style="--c:${COURSES[b.course].color}"></span>${esc(COURSES[b.course].code)} ${b.kind === "office" ? '<span class="muted">office hrs</span>' : b.kind}<span class="spacer"></span><span class="tiny muted">${esc(b.where)}</span></div>`).join("")}
         ${!its.length && !blocks.length ? `<div class="small muted">Nothing scheduled</div>` : ""}
@@ -1022,7 +1042,6 @@
   addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (current === "dashboard") { drawHeatmap($("#heatChart"), now()); drawGlance($("#glanceChart"), now()); } }, 150); });
 
   const t = now();
-  const DOW_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   $("#todayLabel").textContent = `${DOW_LONG[t.getDay()]}, ${MONTHS_LONG[t.getMonth()]} ${t.getDate()} · Fall 2026${params.get("today") ? " (preview date)" : ""}`;
   route();
 })();
