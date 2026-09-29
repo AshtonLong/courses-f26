@@ -1,0 +1,5 @@
+# Course outlines stay local: course materials may not be posted publicly.
+*.pdf
+*.docx
+# Local tooling
+.claude/
