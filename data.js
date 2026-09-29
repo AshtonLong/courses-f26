@@ -50,7 +50,7 @@ const COURSES = {
     email: "cobimbo@uoguelph.ca",
     office: "Reynolds 3310 · x52634",
     officeHours: "Tue 12:00–1:00 PM",
-    lectures: "Tue/Thu 10:00–11:20 AM",
+    lectures: "Sec 01 · Tue/Thu 10:00–11:20 AM",
     platform: "CourseLink",
     textbook: "Sipser, Introduction to the Theory of Computation (3rd ed.)",
     rmpName: "Charlie Obimbo",
@@ -76,7 +76,7 @@ const COURSES = {
     email: "cis3210@socs.uoguelph.ca",
     office: "Reynolds 3304",
     officeHours: "Tue & Thu 12:00–1:00 PM",
-    lectures: "Tue/Thu 8:30–9:50 AM · MCKN 120",
+    lectures: "Sec 0101 · Tue/Thu 8:30–9:50 AM · MCKN 120 · Lab Fri 4:30–5:20 PM · MCKN 121",
     platform: "CourseLink",
     textbook: "Kurose & Ross, Computer Networking: A Top-Down Approach (9th ed.)",
     rmpName: "Sajid Marhon",
@@ -104,7 +104,7 @@ const COURSES = {
     email: "cis3090@socs.uoguelph.ca",
     office: "By appointment",
     officeHours: "By appointment (see Moodle). TAs during lab times (online)",
-    lectures: "See WebAdvisor (add your times in data.js)",
+    lectures: "Sec 0106 · Tue/Thu 2:30–3:50 PM · Lab Wed 12:30–1:20 PM (TA consulting)",
     platform: "Moodle (moodle.socs.uoguelph.ca)",
     textbook: "Pacheco & Malensek, An Introduction to Parallel Programming (2nd ed.)",
     rmpName: "Denis Nikitenko",
@@ -128,7 +128,7 @@ const COURSES = {
     email: "cis3760@socs.uoguelph.ca",
     office: "By appointment",
     officeHours: "By appointment (see Moodle)",
-    lectures: "See WebAdvisor (add your times in data.js)",
+    lectures: "Sec 0102 · Tue/Thu 11:30 AM–12:50 PM · Lab Fri 2:30–4:20 PM",
     platform: "Moodle + SoCS GitLab",
     textbook: "None required",
     rmpName: "Denis Nikitenko",
@@ -154,7 +154,7 @@ const COURSES = {
     email: "jiangnan@uoguelph.ca",
     office: "MCKN 743",
     officeHours: "Mon/Wed 1:00–2:00 & 4:00–5:00 PM",
-    lectures: "Section 2 · Mon/Wed 2:30–3:50 PM · MCKN 116",
+    lectures: "Sec 02 · Mon/Wed 2:30–3:50 PM · MCKN 116",
     platform: "CourseLink + Gradescope",
     textbook: "Sieg, Urban Economics and Fiscal Policy (recommended; eBook is cheap)",
     rmpName: "Jiangnan Zeng",
@@ -173,20 +173,21 @@ const COURSES = {
   },
 };
 
-/* Weekly recurring classes & office hours (Mon=1 … Fri=5). */
+/* Weekly recurring classes, labs & office hours (Mon=1 … Fri=5), from WebAdvisor. */
 const SCHEDULE = [
   { course: "CIS3210", kind: "lecture", days: [2, 4], start: "08:30", end: "09:50", where: "MCKN 120" },
   { course: "CIS3150", kind: "lecture", days: [2, 4], start: "10:00", end: "11:20", where: "" },
+  { course: "CIS3760", kind: "lecture", days: [2, 4], start: "11:30", end: "12:50", where: "" },
+  { course: "CIS3090", kind: "lecture", days: [2, 4], start: "14:30", end: "15:50", where: "" },
   { course: "ECON3500", kind: "lecture", days: [1, 3], start: "14:30", end: "15:50", where: "MCKN 116" },
+  { course: "CIS3090", kind: "lab", days: [3], start: "12:30", end: "13:20", where: "" },
+  { course: "CIS3760", kind: "lab", days: [5], start: "14:30", end: "16:20", where: "" },
+  { course: "CIS3210", kind: "lab", days: [5], start: "16:30", end: "17:20", where: "MCKN 121" },
   { course: "CIS3150", kind: "office", days: [2], start: "12:00", end: "13:00", where: "Reynolds 3310" },
   { course: "CIS3210", kind: "office", days: [2, 4], start: "12:00", end: "13:00", where: "Reynolds 3304" },
   { course: "ECON3500", kind: "office", days: [1, 3], start: "13:00", end: "14:00", where: "MCKN 743" },
   { course: "ECON3500", kind: "office", days: [1, 3], start: "16:00", end: "17:00", where: "MCKN 743" },
-  // TODO: fill in from WebAdvisor, e.g.
-  // { course: "CIS3090", kind: "lecture", days: [1, 3], start: "11:30", end: "12:50", where: "ROOM" },
-  // { course: "CIS3760", kind: "lecture", days: [2, 4], start: "13:00", end: "14:20", where: "ROOM" },
 ];
-const SCHEDULE_TBD = ["CIS3090", "CIS3760"];
 
 const ITEMS = [
   /* ---------------- CIS*3150 Theory of Computation ---------------- */
@@ -226,10 +227,10 @@ const ITEMS = [
 
   /* ---------------- CIS*3090 Parallel Programming ---------------- */
   { id: "3090-a1r", course: "CIS3090", title: "Assignment 1 released", type: "release", due: "2026-09-28", window: ["2026-09-28", "2026-10-04"], weight: 0 },
-  { id: "3090-m1", course: "CIS3090", title: "Midterm 1", type: "test", due: "2026-10-20", weight: 23, notes: "Time and location: see lecture slot / Moodle." },
+  { id: "3090-m1", course: "CIS3090", title: "Midterm 1", type: "test", due: "2026-10-20T14:30", end: "15:50", weight: 23, notes: "Assumed to be in your Tue lecture slot. Confirm on Moodle." },
   { id: "3090-a1", course: "CIS3090", title: "Assignment 1", type: "assignment", due: "2026-10-23T23:59", weight: 18, notes: "Late: 48 h window at −2%/h." },
   { id: "3090-a2", course: "CIS3090", title: "Assignment 2", type: "assignment", due: "2026-11-16T23:59", weight: 18, notes: "Late: 48 h window at −2%/h." },
-  { id: "3090-m2", course: "CIS3090", title: "Midterm 2", type: "test", due: "2026-11-26", weight: 23, notes: "Time and location: see lecture slot / Moodle." },
+  { id: "3090-m2", course: "CIS3090", title: "Midterm 2", type: "test", due: "2026-11-26T14:30", end: "15:50", weight: 23, notes: "Assumed to be in your Thu lecture slot. Confirm on Moodle." },
   { id: "3090-a3", course: "CIS3090", title: "Assignment 3", type: "assignment", due: "2026-12-04T23:59", weight: 18, notes: "Last day of classes. Late: 48 h window at −2%/h." },
 
   /* ---------------- CIS*3760 Software Engineering ---------------- */
@@ -240,7 +241,7 @@ const ITEMS = [
   ].map(([mon, s], i) => ({
     id: `3760-mtg${i + 1}`, course: "CIS3760", title: `Sprint ${s} planning meeting`, type: "meeting",
     due: mon, window: [mon, addDaysISO(mon, 4)], weight: 0, penalty: 4.5, weightLabel: "−4.5% if missed",
-    notes: "Attendance is mandatory. If you're sick, email cis3760@ BEFORE the meeting.",
+    notes: "Attendance is mandatory. Likely in your Tue/Thu 11:30 lecture or Fri 2:30 lab (confirm in class). If you're sick, email cis3760@ BEFORE the meeting.",
   })),
   { id: "3760-s1", course: "CIS3760", title: "Sprint 1", type: "sprint", due: "2026-10-14T23:59", weight: 25, badge: "15–35%", weightLabel: "ranked: best sprint 35%, worst 15%", notes: "Submit via SoCS GitLab. Late: 12 h at −2%/h." },
   { id: "3760-s2r", course: "CIS3760", title: "Sprint 2 released", type: "release", due: "2026-10-12", window: ["2026-10-12", "2026-10-16"], weight: 0 },

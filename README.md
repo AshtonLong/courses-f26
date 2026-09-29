@@ -8,7 +8,7 @@ A static dashboard of every graded obligation for Fall 2026 (CIS*3150, CIS*3210,
 Everything lives in [`data.js`](data.js):
 - **A date moved?** Edit that item's `due` (`"YYYY-MM-DDTHH:MM"`, or `"YYYY-MM-DD"` if no time).
 - **Final exam scheduled?** Replace `tbd: true` / `window` on the `*-fx` items with a real `due` and `end`.
-- **CIS*3090 / CIS*3760 lecture times:** add entries to `SCHEDULE` (examples are commented in there).
+- **Class times / rooms:** edit `SCHEDULE` (lectures, labs, office hours).
 - After editing, bump the `?v=` numbers in `index.html` so browsers fetch the new version.
 
 ## Notes

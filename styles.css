@@ -423,3 +423,4 @@ footer { max-width: 1240px; margin: 0 auto; padding: 0 16px 40px; color: var(--m
 @media (max-width: 480px) { .cprog.wide .cprog-row { grid-template-columns: 84px minmax(0, 1fr) 104px; } .cprog-row { grid-template-columns: 84px minmax(0, 1fr) 70px; } }
 @media (max-width: 720px) { .grid-2.kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .kpi { padding: 13px; } .kpi .v { font-size: 24px; } }
 @media (max-width: 480px) { .hero-weight { text-align: left; } }
+.wk-block.lab { background: color-mix(in srgb, var(--c) 9%, var(--surface)); border: 1px dotted color-mix(in srgb, var(--c) 60%, transparent); border-left: 3px dotted var(--c); }
