@@ -839,7 +839,7 @@
       });
       return `<div class="wk-col" style="height:${(H1 - H0) * PX}px">
           ${holidays.has(iso) ? `<div class="empty small" style="padding-top:40px">No classes</div>` : ""}
-          ${blocks.map((b) => { const c = COURSES[b.course]; return `<div class="wk-block ${b.kind === "office" ? "office" : ""}" style="--c:${c.color};top:${top(b.start)}px;height:${top(b.end) - top(b.start) - 2}px${b._n > 1 ? `;left:calc(${(b._i / b._n) * 100}% + 3px);right:auto;width:calc(${100 / b._n}% - 6px)` : ""}" data-tip="${esc(`<b>${c.code} ${b.kind === "office" ? "office hours" : "lecture"}</b><br>${b.start}–${b.end}${b.where ? " · " + b.where : ""}`)}"><b>${esc(c.code)}</b>${b.kind === "office" ? "Office hrs" : esc(b.where || "Lecture")}</div>`; }).join("")}
+          ${blocks.map((b) => { const c = COURSES[b.course]; return `<div class="wk-block ${b.kind}" style="--c:${c.color};top:${top(b.start)}px;height:${top(b.end) - top(b.start) - 2}px${b._n > 1 ? `;left:calc(${(b._i / b._n) * 100}% + 3px);right:auto;width:calc(${100 / b._n}% - 6px)` : ""}" data-tip="${esc(`<b>${c.code} ${b.kind === "office" ? "office hours" : b.kind}</b><br>${b.start}–${b.end}${b.where ? " · " + b.where : ""}`)}"><b>${esc(c.code)}</b>${b.kind === "office" ? "Office hrs" : b.kind === "lab" ? "Lab" + (b.where ? " · " + esc(b.where) : "") : esc(b.where || "Lecture")}</div>`; }).join("")}
           ${dayItems(d).filter((i) => i.hasTime && i.start.getHours() >= H0 && i.start.getHours() < H1).map((i) => `<div class="wk-block deadline" style="--c:${i.c};top:${top(`${i.start.getHours()}:${i.start.getMinutes()}`)}px;height:${Math.max(20, i.end ? top(i.end) - top(`${i.start.getHours()}:${i.start.getMinutes()}`) - 2 : 20)}px"><b>${esc(shortCode(i.course))} ${esc(shortTitle(i))}</b></div>`).join("")}
         </div>`;
     }).join("");
@@ -855,7 +855,7 @@
       const its = dayItems(d);
       return `<div class="card day-list"><h4 class="${sameDay(d, ref) ? "" : ""}">${esc(fmtDow(d))}${sameDay(d, ref) ? ' <span class="badge accent">today</span>' : ""}${holidays.has(iso) ? ' <span class="badge">no classes</span>' : ""}</h4>
         ${its.map((i) => `<div class="slot" style="background:var(--danger-soft)"><span class="tm">${i.hasTime ? fmtT(i.start) : i.window ? "this week" : "by 11:59 PM"}</span><span class="dot" style="--c:${i.c}"></span><b>${esc(i.cc.code)} ${esc(i.title)}</b><span class="spacer"></span>${wBadge(i)}</div>`).join("")}
-        ${blocks.map((b) => `<div class="slot"><span class="tm">${b.start}–${b.end}</span><span class="dot" style="--c:${COURSES[b.course].color}"></span>${esc(COURSES[b.course].code)} ${b.kind === "office" ? '<span class="muted">office hrs</span>' : "lecture"}<span class="spacer"></span><span class="tiny muted">${esc(b.where)}</span></div>`).join("")}
+        ${blocks.map((b) => `<div class="slot"><span class="tm">${b.start}–${b.end}</span><span class="dot" style="--c:${COURSES[b.course].color}"></span>${esc(COURSES[b.course].code)} ${b.kind === "office" ? '<span class="muted">office hrs</span>' : b.kind}<span class="spacer"></span><span class="tiny muted">${esc(b.where)}</span></div>`).join("")}
         ${!its.length && !blocks.length ? `<div class="small muted">Nothing scheduled</div>` : ""}
       </div>`;
     }).join("");
@@ -872,12 +872,11 @@
           <span class="small muted">${weekItems.filter((i) => i.graded).length} graded items · <span class="heat-pill" style="background:${w ? heatColor(w) : "var(--surface-3)"};color:${w ? "#fff" : "var(--muted)"}">${fmtW(Math.round(w * 10) / 10)} pts</span></span>
         </div>
       </div>
-      <div class="notice" style="margin-bottom:16px">CIS*3090 and CIS*3760 lecture times weren't in the outlines ("See WebAdvisor"). Add them to <code>SCHEDULE</code> in <code>data.js</code> and they'll show up here. CIS*3760 sprint planning meetings (−4.5% if missed) happen during those slots.</div>
       <div class="card wk-desktop">
         <div class="wk"><div></div>${heads}</div>
         <div class="wk"><div class="tiny muted" style="padding-top:3px">Due</div>${strips}</div>
         <div class="wk" style="margin-top:8px"><div class="wk-times">${times}</div>${cols}</div>
-        <div class="legend"><span><i class="dot" style="--c:var(--muted)"></i>Solid = lecture</span><span>Striped = office hours</span><span style="color:var(--danger)">Red = graded thing (top strip = due that day)</span></div>
+        <div class="legend"><span><i class="dot" style="--c:var(--muted)"></i>Solid = lecture</span><span>Dotted = lab</span><span>Striped = office hours</span><span style="color:var(--danger)">Red = graded thing (top strip = due that day)</span></div>
       </div>
       <div class="wk-mobile">${mobile}</div>
       ${wkend.length ? `<div class="card section-gap"><div class="card-h"><h2>This weekend</h2></div><div class="items">${wkend.map((i) => itemRow(i, ref, { compact: true })).join("")}</div></div>` : ""}`;
